@@ -61,7 +61,7 @@ local function InternalFunction_CopyCharacterDetails()
     end
 end
 
-local function InternalFunction_ApplyCharacterDetails()
+local function InternalFunction_ApplyCharacterDetails(SkipFF)
     if __SavedData then
         for Key, Value in pairs(__SavedData.Humanoid) do
             Character.Humanoid[Key] = Value
@@ -80,7 +80,7 @@ local function InternalFunction_ApplyCharacterDetails()
             ModifyGuns()
         end
 
-        Character:WaitForChild("ForceField").Visible = false
+        if not SkipFF then Character:WaitForChild("ForceField").Visible = false end
     end
 end
 
@@ -104,8 +104,8 @@ local function InternalFunction_GetClosestPlayer(TargetDistance)
 end
 
 local function InternalFunction_BecomeCriminal()
-    local SavedLoc = CrimSpawn.CFrame
     local CrimSpawn = workspace["Criminals Spawn"].SpawnLocation
+    local SavedLoc = CrimSpawn.CFrame
     CrimSpawn.CanCollide = false
     CrimSpawn.Transparency = 1
     CrimSpawn.CFrame = Character.HumanoidRootPart.CFrame
@@ -306,12 +306,11 @@ function SetNametagColor(BrickColor) -- Only to a BrickColor.
     
     NametagConnection = Character.Humanoid.Died:Connect(function()
         InternalFunction_CopyCharacterDetails()
-        if Player.Team ~= nil then NametagConnection:Disconnect() return end
         Saved = Character.HumanoidRootPart.CFrame
         Player.CharacterAdded:Wait()
         wait(0.1)
         Character.HumanoidRootPart.CFrame = Saved
-        InternalFunction_ApplyCharacterDetails()
+        InternalFunction_ApplyCharacterDetails(true)
     end)
 
     Character.Humanoid:ChangeState(Enum.HumanoidStateType.Dead)
