@@ -506,7 +506,16 @@ function GodMode(Off)
     end
 
     if not Off then
-        getgenv().__GodModeConnection = Character.
+        local Hook = function()
+            InternalFunction_CopyCharacterDetails()
+            Saved = Character.HumanoidRootPart.CFrame
+            Player.CharacterAdded:Wait()
+            Character.HumanoidRootPart.CFrame = Saved
+            getgenv().__GodModeConnection = Character.Humanoid.Died:Connect(Hook)
+            wait(0.5)
+            InternalFunction_ApplyCharacterDetails()
+        end
+        getgenv().__GodModeConnection = Character.Humanoid.Died:Connect(Hook)
     end
 end
 
