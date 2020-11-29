@@ -508,6 +508,4 @@ for Key, Value in pairs(getfenv()) do
     end
 end
 
-BringPlayer(Players["narosia"])
-
 return Module
