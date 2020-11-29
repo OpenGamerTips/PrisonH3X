@@ -304,14 +304,16 @@ function SetNametagColor(BrickColor) -- Only to a BrickColor.
     local Saved = Character.HumanoidRootPart.CFrame
     LoadCharacter:InvokeServer(Player.Name.." is weird", BrickColor.Name)
     
-    NametagConnection = Character.Humanoid.Died:Connect(function()
+    local Hook = function()
+        if Player.Team ~= nil then NametagConnection:Disconnect() end
         InternalFunction_CopyCharacterDetails()
         Saved = Character.HumanoidRootPart.CFrame
         Player.CharacterAdded:Wait()
-        wait(0.1)
         Character.HumanoidRootPart.CFrame = Saved
+        NametagConnection = Character.Humanoid.Died:Connect(Hook)
         InternalFunction_ApplyCharacterDetails(true)
-    end)
+    end
+    NametagConnection = Character.Humanoid.Died:Connect(Hook)
 
     Character.Humanoid:ChangeState(Enum.HumanoidStateType.Dead)
     Player.CharacterAdded:Wait(); wait(0.2)
@@ -496,6 +498,16 @@ function GiveGunsToPlayer(Plr)
     GiveToolToPlayer(Player.Backpack["Remington 870"], Plr)
     Camera.CameraSubject = Character.Humanoid
     SetPrisonStatus("PrisonH3X "..Version, "A Prison Life script library made by H3x0R (OpenGamerTips).")
+end
+
+function GodMode(Off)
+    if __GodModeConnection then
+        __GodModeConnection:Disconnect()
+    end
+
+    if not Off then
+        getgenv().__GodModeConnection = Character.
+    end
 end
 
 SetPrisonStatus("PrisonH3X "..Version, "A Prison Life script library made by H3x0R (OpenGamerTips).")
