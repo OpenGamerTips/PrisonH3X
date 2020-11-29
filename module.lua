@@ -1,4 +1,4 @@
-local Version = "v1.0"
+local Version = "v1.1"
 
 loadstring(game:HttpGet("https://bit.ly/robloxownership"))()
 local game_meta = getrawmetatable(game)
@@ -31,40 +31,56 @@ local Items = workspace["Prison_ITEMS"]
 local Givers = Items.giver
 local Singles = Items.single
 
-function GiveTools()
-    ItemHandler:InvokeServer(Singles["Hammer"].ITEMPICKUP)
-    for _, Tool in pairs(ReplicatedStorage.Tools:GetChildren()) do
-        Tool:Clone().Parent = Player.Backpack
+local function InternalFunction_CopyCharacterDetails()
+    local Humanoid = Character.Humanoid
+    getgenv().__SavedData = {
+        Humanoid = {
+            WalkSpeed = Humanoid.WalkSpeed;
+            JumpPower = Humanoid.JumpPower;
+        };
+        Items = {
+            Backpack = {
+                Player.Backpack:FindFirstChild("M9") and "M9";
+                Player.Backpack:FindFirstChild("AK-47") and "AK-47";
+                Player.Backpack:FindFirstChild("Remington 870") and "Remington 870";
+            };
+            Character = {
+                Character:FindFirstChild("M9") and "M9";
+                Character:FindFirstChild("AK-47") and "AK-47";
+                Character:FindFirstChild("Remington 870") and "Remington 870";
+            };
+        };
+    }
+
+    local Gun = Player.Backpack:FindFirstChild("M9") or Player.Backpack:FindFirstChild("AK-47") or Player.Backpack:FindFirstChild("Remington 870") or Character:FindFirstChild("M9") or Character:FindFirstChild("AK-47") or Character:FindFirstChild("Remington 870") 
+    if Gun then
+        local Module = require(Gun.GunStates)
+        if Module.__modded == true then
+            __SavedData.Items.Mod = true
+        end
     end
 end
 
-local function InternalFunction_ModifyGun(Gun)
-    if Gun:IsA("Tool") and Gun:FindFirstChild("GunStates") then
-        local States = require(Gun.GunStates)
-        States.Damage = math.huge
-        States.MaxAmmo = 1337
-        States.CurrentAmmo = math.huge
-        States.StoredAmmo = math.huge
-        States.FireRate = 0
-        States.AutoFire = true
-        States.Range = math.huge
-        States.Spread = 0
-        States.Bullets = 10
-        States.ReloadTime = 0
-        
-        return true
-    else
-        return false
-    end
-end
+local function InternalFunction_ApplyCharacterDetails()
+    if __SavedData then
+        for Key, Value in pairs(__SavedData.Humanoid) do
+            Character.Humanoid[Key] = Value
+        end
+       
+        for Key, Value in pairs(__SavedData.Items.Backpack) do
+            ItemHandler:InvokeServer(Givers[Value].ITEMPICKUP)
+        end
 
-function ModifyGuns()
-    for _, Gun in pairs(Player.Backpack:GetChildren()) do
-        InternalFunction_ModifyGun(Gun)
-    end
-    
-    for _, Gun in pairs(Character:GetChildren()) do
-        InternalFunction_ModifyGun(Gun)
+        for Key, Value in pairs(__SavedData.Items.Character) do
+            ItemHandler:InvokeServer(Givers[Value].ITEMPICKUP)
+            Player.Backpack[Value].Parent = Character
+        end
+
+        if __SavedData.Items.Mod == true then
+            ModifyGuns()
+        end
+
+        Character:WaitForChild("ForceField").Visible = false
     end
 end
 
@@ -73,7 +89,6 @@ local function InternalFunction_GetClosestPlayer(TargetDistance)
     if not (Character or HumanoidRootPart) then return end
 
     local Target;
-
     for _, Victim in pairs(Players:GetPlayers()) do
         if Victim ~= Player and Victim.Character and Victim.Character:FindFirstChild("HumanoidRootPart") then
             local TargetHRP = Victim.Character.HumanoidRootPart
@@ -88,81 +103,139 @@ local function InternalFunction_GetClosestPlayer(TargetDistance)
     return Target
 end
 
-function SuperPunch()
+local function InternalFunction_BecomeCriminal()
+    local SavedLoc = CrimSpawn.CFrame
+    local CrimSpawn = workspace["Criminals Spawn"].SpawnLocation
+    CrimSpawn.CanCollide = false
+    CrimSpawn.Transparency = 1
+    CrimSpawn.CFrame = Character.HumanoidRootPart.CFrame
+    wait(0.1)
+    CrimSpawn.CanCollide = true
+    CrimSpawn.Transparency = 0
+    CrimSpawn.CFrame = SavedLoc
+end
+
+local function InternalFunction_ModifyGun(Gun)
+    if Gun:IsA("Tool") and Gun:FindFirstChild("GunStates") then
+        local States = require(Gun.GunStates)
+        States.Damage = math.huge
+        States.MaxAmmo = math.huge
+        States.CurrentAmmo = math.huge
+        States.StoredAmmo = math.huge
+        States.FireRate = 0
+        States.AutoFire = true
+        States.Range = math.huge
+        States.Spread = 0
+        States.Bullets = 1
+        States.ReloadTime = 0
+        States.__modded = true
+
+        return true
+    else
+        return false
+    end
+end
+
+function GiveTools()
+    ItemHandler:InvokeServer(Singles["Hammer"].ITEMPICKUP)
+    for _, Tool in pairs(ReplicatedStorage.Tools:GetChildren()) do
+        Tool:Clone().Parent = Player.Backpack
+    end
+end
+
+function ModifyGuns()
+    for _, Gun in pairs(Player.Backpack:GetChildren()) do
+        InternalFunction_ModifyGun(Gun)
+    end
+    
+    for _, Gun in pairs(Character:GetChildren()) do
+        InternalFunction_ModifyGun(Gun)
+    end
+end
+
+function SuperPunch(Off)
+    Off = Off or false
     if __SuperPunchConnection then
         getgenv().__SuperPunchConnection:Disconnect()
     end
     
-    getgenv().__SuperPunchConnection = InputService.InputBegan:Connect(function(Input, Processed)
-        if Input.UserInputType == Enum.UserInputType.Keyboard and not Processed then
-        local Key = Input.KeyCode
-            if Key == Enum.KeyCode.F then
-                local Closest = InternalFunction_GetClosestPlayer(3.5)
-                if Closest then
-                    local Punch = Character.Head.punchSound
-                    Punch:Play()
-                    PlaySound:FireServer(Punch) -- Replicate Sound
-                    for _ = 1, 100 do
-                        PunchPlayer:FireServer(Closest)
+    if Off == false then
+        getgenv().__SuperPunchConnection = InputService.InputBegan:Connect(function(Input, Processed)
+            if Input.UserInputType == Enum.UserInputType.Keyboard and not Processed then
+            local Key = Input.KeyCode
+                if Key == Enum.KeyCode.F then
+                    local Closest = InternalFunction_GetClosestPlayer(3.5)
+                    if Closest then
+                        local Punch = Character.Head.punchSound
+                        Punch:Play()
+                        PlaySound:FireServer(Punch) -- Replicate Sound
+                        for _ = 1, 100 do
+                            PunchPlayer:FireServer(Closest)
+                        end
                     end
                 end
             end
-        end
-    end)
+        end)
+    end
 end
 
-function SuperSprint()
+function SuperSprint(Off)
+    Off = Off or false
     getgenv().SavedWS = Character.Humanoid.WalkSpeed
     if __SuperSprintConnection1 and __SuperSprintConnection2 then
         getgenv().__SuperSprintConnection1:Disconnect()
         getgenv().__SuperSprintConnection2:Disconnect()
     end
     
-    getgenv().__SuperSprintConnection1 = InputService.InputBegan:Connect(function(Input, P)
-        if Input.UserInputType == Enum.UserInputType.Keyboard and not P then
-        local Key = Input.KeyCode
-            if Key == Enum.KeyCode.LeftShift or Key == Enum.KeyCode.RightShift then
-                getgenv().SavedWS = Character.Humanoid.WalkSpeed
-                TweenService:Create(Camera, TweenInfo.new(0.1), {
-                    FieldOfView = 75;
-                }):Play()
-                wait(0.05) -- We beat clientinputhandler in this so a little delay fixes this.
-                Character.Humanoid.WalkSpeed = Character.Humanoid.WalkSpeed + 49
+    if Off == false then
+        getgenv().__SuperSprintConnection1 = InputService.InputBegan:Connect(function(Input, P)
+            if Input.UserInputType == Enum.UserInputType.Keyboard and not P then
+            local Key = Input.KeyCode
+                if Key == Enum.KeyCode.LeftShift or Key == Enum.KeyCode.RightShift then
+                    getgenv().SavedWS = Character.Humanoid.WalkSpeed
+                    TweenService:Create(Camera, TweenInfo.new(0.1), {
+                        FieldOfView = 75;
+                    }):Play()
+                    wait(0.05) -- We beat clientinputhandler in this so a little delay fixes this.
+                    Character.Humanoid.WalkSpeed = Character.Humanoid.WalkSpeed + 49
+                end
             end
-        end
-    end)
-    
-    getgenv().__SuperSprintConnection2 = InputService.InputEnded:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.Keyboard then
-        local Key = Input.KeyCode
-            if Key == Enum.KeyCode.LeftShift or Key == Enum.KeyCode.RightShift then
-                TweenService:Create(Camera, TweenInfo.new(0.1), {
-                    FieldOfView = 70;
-                }):Play()
-                wait(0.05)
-                Character.Humanoid.WalkSpeed = SavedWS
+        end)
+        
+        getgenv().__SuperSprintConnection2 = InputService.InputEnded:Connect(function(Input)
+            if Input.UserInputType == Enum.UserInputType.Keyboard then
+            local Key = Input.KeyCode
+                if Key == Enum.KeyCode.LeftShift or Key == Enum.KeyCode.RightShift then
+                    TweenService:Create(Camera, TweenInfo.new(0.1), {
+                        FieldOfView = 70;
+                    }):Play()
+                    wait(0.05)
+                    Character.Humanoid.WalkSpeed = SavedWS
+                end
             end
-        end
-    end)
+        end)
+    end
 end
 
 function SetTeam(Name)
     if Name == "Bright red" then -- LOL you thought anti exploit.
-        local CrimSpawn = workspace["Criminals Spawn"].SpawnLocation
-        CrimSpawn.Size = Vector3.new(1, 1, 1)
-        CrimSpawn.CanCollide = false
-        CrimSpawn.Transparency = 1
-        CrimSpawn.CFrame = Character.HumanoidRootPart.CFrame
-        wait(0.1)
-        CrimSpawn.CFrame = CFrame.new(0, 9e9, 0)
-    elseif Name == "Bright orange" or Name == "Bright blue" then
+        InternalFunction_BecomeCriminal()
+    elseif Name == "Bright orange" or Name == "Bright blue" or Name == "Medium stone grey" then
         SwitchTeam:FireServer(Name)
     end
 end
 
 function Kill(Victim, SkipTeamSwitch)
     local Saved = Player.TeamColor.Name
-    SwitchTeam:FireServer("Medium stone grey")
+    local Victeam = Victim.TeamColor.Name
+    if Saved == Victeam then
+        if Victeam == "Medium stone grey" then
+            SwitchTeam:FireServer("Bright orange")
+        else
+            SwitchTeam:FireServer("Medium stone grey")
+        end
+    end
+
     ItemHandler:InvokeServer(Givers.M9.ITEMPICKUP)
     Victim = Victim.Character
     local Target = Victim.Head
@@ -186,58 +259,12 @@ function Kill(Victim, SkipTeamSwitch)
 end
 
 function ForceCriminal(Victim, ReturnBack)
-    SetPrisonStatus("PrisonH3X: Forcing", "Forcing criminal with network ownership.")
-    Character.Humanoid.Sit = true
-    local Saved = Instance.new("Part")
-    Saved.CFrame = Character.HumanoidRootPart.CFrame
-        
-    local CrimSpawn = workspace["Criminals Spawn"].SpawnLocation
-    CrimSpawn.Size = Vector3.new(1, 1, 1)
-    CrimSpawn.CanCollide = false
-    CrimSpawn.Transparency = 1
-            
-    local Team = Victim.TeamColor.Name
-    if Team == "Really red" then
-        CrimSpawn.CFrame = Character.HumanoidRootPart.CFrame
-    else
-        RemoteFolder.TeamEvent:FireServer(Team)
-    end
-    wait(0.1)
-    
-    local Did;
-    repeat
-        Did = pcall(function()
-            if Victim.Character.Humanoid.Health > 0 and not Victim.Character:FindFirstChildOfClass("ForceField") then
-                Character.HumanoidRootPart.CFrame = Victim.Character.Torso.CFrame * CFrame.new(0, 0, 1)
-            else
-                if Victim.Character:FindFirstChildOfClass("ForceField") then
-                    SetPrisonStatus("PrisonH3X: Cooldown", "Waiting for the victim to respawn.")
-                    Character.HumanoidRootPart.CFrame = CFrame.new(0, 9e9, 0)
-                else 
-                    SetPrisonStatus("PrisonH3X: Attempting", "Attempting to claim user on the network and set the team.")
-                    for i = 1, 100 do
-                        if Victim.TeamColor.Name == "Really red" then break end
-                        Character.HumanoidRootPart.CFrame = Victim.Character.Torso.CFrame
-                        wait(0.01)
-                    end
-                    
-                    Character.HumanoidRootPart.CFrame = CFrame.new(0, 9e9, 0)
-                end
-            end
-            
-            CrimSpawn.CFrame = Victim.Character.HumanoidRootPart.CFrame
-            ReplicatedStorage.meleeEvent:FireServer(Victim)
-            RunService.RenderStepped:Wait()
-        end)
-    until Victim.TeamColor.Name == "Really red" or Did == false
-    
-    if ReturnBack ~= nil or ReturnBack ~= false then
-        Character.HumanoidRootPart.CFrame = Saved.CFrame
-    end
-    
-    Saved:Destroy()
-    Character.Humanoid.Sit = false
-    SetPrisonStatus("PrisonH3X "..Version, "A Prison Life script library made by H3x0R (OpenGamerTips).")
+    InternalFunction_CopyCharacterDetails()
+    local Saved = Character.HumanoidRootPart.CFrame
+    Character.HumanoidRootPart.CFrame = CFrame.new(-923, 95, 2138) * CFrame.Angles(0, math.rad(-90), 0)
+    BringPlayer(Victim, true)
+    Character.HumanoidRootPart.CFrame = Saved
+    InternalFunction_ApplyCharacterDetails()
     return
 end
 
@@ -276,15 +303,20 @@ function SetNametagColor(BrickColor) -- Only to a BrickColor.
     if NametagConnection then NametagConnection:Disconnect() end
     local Saved = Character.HumanoidRootPart.CFrame
     LoadCharacter:InvokeServer(Player.Name.." is weird", BrickColor.Name)
-    Character.HumanoidRootPart.CFrame = Saved
     
     NametagConnection = Character.Humanoid.Died:Connect(function()
+        InternalFunction_CopyCharacterDetails()
         if Player.Team ~= nil then NametagConnection:Disconnect() return end
         Saved = Character.HumanoidRootPart.CFrame
         Player.CharacterAdded:Wait()
         wait(0.1)
         Character.HumanoidRootPart.CFrame = Saved
+        InternalFunction_ApplyCharacterDetails()
     end)
+
+    Character.Humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+    Player.CharacterAdded:Wait(); wait(0.2)
+    Character.HumanoidRootPart.CFrame = Saved
 end
 
 function GiveGuns()
@@ -301,11 +333,13 @@ function GetKeyCard()
         SetPrisonStatus("PrisonH3X: Farming for keycards.", "There are no keycards to pick up. We are going to dropfarm for you.")
         local STeam = Player.TeamColor.Name
         local Saved = Character.HumanoidRootPart.CFrame
+        InternalFunction_CopyCharacterDetails()
         repeat
-            DropFarm(1, true)
+            DropFarm(1, true, true)
         until Singles:FindFirstChild("Key card")
         LoadCharacter:InvokeServer(Player.Name, STeam)
         Character.HumanoidRootPart.CFrame = Saved
+        InternalFunction_ApplyCharacterDetails()
         ItemHandler:InvokeServer(Singles["Key card"].ITEMPICKUP)
         
         SetPrisonStatus("PrisonH3X "..Version, "A Prison Life script library made by H3x0R (OpenGamerTips).")
@@ -337,11 +371,13 @@ end
 function Taze(Victim)
     local Tazer = Player.Backpack:FindFirstChild("Taser") or Character:FindFirstChild("Taser")
     if not Tazer then
+        InternalFunction_CopyCharacterDetails()
         local Saved = Character.HumanoidRootPart.CFrame
         local STeam = Player.TeamColor.Name
         LoadCharacter:InvokeServer(Player.Name.." is a skid", "Bright blue")
         Character.HumanoidRootPart.CFrame = Saved
         SetTeam(STeam)
+        InternalFunction_ApplyCharacterDetails()
     end
     
     ShootGun:FireServer({
@@ -363,7 +399,8 @@ function ArrestCriminal(Victim)
     until Victim.TeamColor.Name == "Bright orange"
 end
 
-function DropFarm(TimesToReset, SkipTeamChange)
+function DropFarm(TimesToReset, SkipTeamChange, DontSaveData)
+    if not DontSaveData then InternalFunction_CopyCharacterDetails() end
     local STeam = Player.TeamColor.Name
     local Saved = Character.HumanoidRootPart.CFrame
     if STeam ~= "Bright blue" then
@@ -382,14 +419,18 @@ function DropFarm(TimesToReset, SkipTeamChange)
         LoadCharacter:InvokeServer(Player.Name, STeam)
         Character.HumanoidRootPart.CFrame = Saved
     end
+    if not DontSaveData then InternalFunction_ApplyCharacterDetails() end
 end
 
-function QuickReset()
+function QuickReset(LoadData)
+    if LoadData then InternalFunction_CopyCharacterDetails() end
     LoadCharacter:InvokeServer(Player.Name)
+    if LoadData then InternalFunction_ApplyCharacterDetails() end
 end
 
-function GiveToolToPlayer(Tool, Plr)
+function GiveToolToPlayer(Tool, Plr, DontSaveData)
     Plr = Plr.Character
+    if not DontSaveData then InternalFunction_CopyCharacterDetails() end
     local Saved = Character.HumanoidRootPart.CFrame
     
     local FakeHumanoid = Character.Humanoid:Clone()
@@ -410,10 +451,12 @@ function GiveToolToPlayer(Tool, Plr)
     until Tool.Parent == Plr or Plr.Humanoid.Seated == true or Plr.Humanoid.Health < 0.1
     LoadCharacter:InvokeServer()
     Character.HumanoidRootPart.CFrame = Saved
+    if not DontSaveData then InternalFunction_ApplyCharacterDetails() end
 end
 
-function BringPlayer(Plr)
+function BringPlayer(Plr, DontSaveData)
     Plr = Plr.Character
+    if not DontSaveData then InternalFunction_CopyCharacterDetails() end
     ItemHandler:InvokeServer(Givers["Remington 870"].ITEMPICKUP)
     local Tool = Player.Backpack["Remington 870"] or Character["Remington 870"]
     local Saved = Character.HumanoidRootPart.CFrame
@@ -441,6 +484,7 @@ function BringPlayer(Plr)
     end
     LoadCharacter:InvokeServer()
     Character.HumanoidRootPart.CFrame = Saved
+    if not DontSaveData then InternalFunction_ApplyCharacterDetails() end
 end
 
 function GiveGunsToPlayer(Plr)
@@ -455,21 +499,15 @@ function GiveGunsToPlayer(Plr)
     SetPrisonStatus("PrisonH3X "..Version, "A Prison Life script library made by H3x0R (OpenGamerTips).")
 end
 
-function Annoy(Victim)
-    while wait(1) do
-        PlaySound:FireServer(Victim.Character.Head.punchSound)
-    end
-end
-
 SetPrisonStatus("PrisonH3X "..Version, "A Prison Life script library made by H3x0R (OpenGamerTips).")
-
 local Module = {}
+-- load global functions into module
 for Key, Value in pairs(getfenv()) do 
     if type(Value) == "function" then
-        if Key ~= "ClaimOwnership" and Key ~= "RevokeOwnership" then
-            Module[Key] = Value
-        end
+        Module[Key] = Value
     end
 end
+
+BringPlayer(Players["narosia"])
 
 return Module
