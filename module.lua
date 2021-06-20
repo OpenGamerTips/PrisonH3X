@@ -241,15 +241,14 @@ function Kill(Victim, SkipTeamSwitch)
     local Target = Victim.Head
     local Gun = Character:FindFirstChild("M9") or Player.Backpack:FindFirstChild("M9")
     for i = 1, 10 do
-        ShootGun:FireServer({
+        ShootGun:FireServer(Gun, {
             {
-                RayObject = Ray.new(Vector3.new(), Vector3.new());
-                Distance = 5;
-                CFrame = Target.CFrame;
+				Cframe = Target.CFrame;
                 Hit = Target;
+                RayObject = Ray.new(Gun.Handle.Position, Target.Position);
+                Distance = (Gun.Handle.Position - Target.Position).Magnitude;
             }
-        }, 
-        Gun)
+        })
     end
     if not SkipTeamSwitch then
         SetTeam(Saved)
@@ -381,15 +380,14 @@ function Taze(Victim)
         InternalFunction_ApplyCharacterDetails()
     end
     
-    ShootGun:FireServer({
+    ShootGun:FireServer(Tazer, {
         {
-            RayObject = Ray.new(Vector3.new(), Vector3.new());
-            Distance = 5;
-            CFrame = Victim.Character.HumanoidRootPart.CFrame;
+			Cframe = Victim.Character.HumanoidRootPart.CFrame;
             Hit = Victim.Character.HumanoidRootPart;
+            RayObject = Ray.new(Tazer.Handle.Position, Victim.Character.HumanoidRootPart.Position);
+            Distance = (Tazer.Handle.Position - Victim.Character.HumanoidRootPart.Position).Magnitude;
         }
-    }, 
-    Tazer)
+    })
 end
 
 function ArrestCriminal(Victim)
