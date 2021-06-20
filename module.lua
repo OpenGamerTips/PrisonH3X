@@ -1,4 +1,4 @@
-local Version = "v1.1"
+local Version = "v1.1.1"
 
 loadstring(game:HttpGet("https://bit.ly/gainownership"))()
 local game_meta = getrawmetatable(game)
